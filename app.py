@@ -33,12 +33,12 @@ except Exception as e:
 @app.route('/api/run_speedtest', methods=['GET'])
 def run_speedtest():
     try:
-        # Run the speedtest command and capture both stdout and stderr
-        result = subprocess.run(['speedtest', '-f', 'json'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Run the speedtest command with --json flag instead of -f json
+        result = subprocess.run(['speedtest', '--secure', '--json'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
         # Log the stderr output to help with debugging
         if result.stderr:
-            app.logger.error(f"Speedtest stderr: {result.stderr.decode('utf-8')}")
+            app.logger.error(f"Speedtest stderr: {result.stderr}")
 
         # Check if the command failed
         if result.returncode != 0:
@@ -48,15 +48,15 @@ def run_speedtest():
         speedtest_data = json.loads(result.stdout)
 
         # Extract download, upload bandwidth, and ISP
-        download_speed_Bps = speedtest_data['download']['bandwidth']  # Bytes per second
-        upload_speed_Bps = speedtest_data['upload']['bandwidth']      # Bytes per second
+        download_speed_bps = speedtest_data['download']  # bits per second
+        upload_speed_bps = speedtest_data['upload']      # bits per second
 
-        # Convert from Bytes per second (Bps) to Megabits per second (Mbps)
-        download_speed_mbps = (download_speed_Bps * 8) / 1e6  # Convert from Bps to Mbps
-        upload_speed_mbps = (upload_speed_Bps * 8) / 1e6      # Convert from Bps to Mbps
+        # Convert from bits per second (bps) to Megabits per second (Mbps)
+        download_speed_mbps = download_speed_bps / 1e6
+        upload_speed_mbps = upload_speed_bps / 1e6
 
         # Extract ISP name
-        isp = speedtest_data['isp']
+        isp = speedtest_data['client']['isp']
 
         # Return results as JSON
         return jsonify({
@@ -72,7 +72,6 @@ def run_speedtest():
     except Exception as e:
         app.logger.error(f"Failed to run speedtest: {str(e)}")
         return jsonify({"message": "Error running speedtest", "error": str(e)}), 500
-
 
 
 # Route to handle survey data submission
